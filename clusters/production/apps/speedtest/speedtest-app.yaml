@@ -1,24 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: speedtest-exporter
+  name: speedtest
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://alexjustesen.github.io/helm-charts
-    chart: speedtest-exporter
+    repoURL: https://openspeedtest.github.io/Helm-chart/
+    chart: speedtest
     targetRevision: 1.5.3 # check latest with helm search
-    helm:
-      values: |
-        image:
-          repository: ghcr.io/alexjustesen/speedtest-exporter
-          tag: latest
-        serviceMonitor:
-          enabled: true
-        schedule: "0 * * * *" # runs hourly
-        tolerations: []
-        affinity: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
