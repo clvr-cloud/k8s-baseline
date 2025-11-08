@@ -12,14 +12,37 @@ spec:
     helm:
       values: |
         deploymentMode: SingleBinary
+
+        loki:
+          storage:
+            type: filesystem
+            bucketNames:
+              chunks: loki-chunks
+              ruler: loki-ruler
+              admin: loki-admin
+          commonConfig:
+            path_prefix: /var/loki
+          schemaConfig:
+            configs:
+              - from: 2024-01-01
+                store: boltdb-shipper
+                object_store: filesystem
+                schema: v13
+                index:
+                  prefix: index_
+                  period: 24h
+
         persistence:
           enabled: true
           size: 10Gi
+
         serviceMonitor:
           enabled: true
+
         monitoring:
           dashboards:
             enabled: true
+        
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

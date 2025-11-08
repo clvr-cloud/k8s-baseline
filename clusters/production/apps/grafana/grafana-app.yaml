@@ -19,7 +19,7 @@ spec:
           port: 3000
 
         ingress:
-          enabled: true
+          enabled: false
           className: nginx
           hosts:
             - host: grafana.local
