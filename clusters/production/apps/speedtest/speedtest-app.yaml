@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://openspeedtest.github.io/Helm-chart/
     chart: speedtest
-    targetRevision: 1.5.3 # check latest with helm search
+    targetRevision: 0.1.2 # check latest with helm search
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
