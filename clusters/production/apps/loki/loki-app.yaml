@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://grafana.github.io/helm-charts
     chart: loki
-    targetRevision: 6.27.0 # check latest with `helm search repo grafana/loki`
+    targetRevision: 6.46.0 # check latest with `helm search repo grafana/loki`
     helm:
       values: |
         deploymentMode: SingleBinary

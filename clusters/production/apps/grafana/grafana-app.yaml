@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://grafana.github.io/helm-charts
     chart: grafana
-    targetRevision: 8.6.0 # check latest with `helm search repo grafana/grafana`
+    targetRevision: 10.1.4 # check latest with `helm search repo grafana/grafana`
     helm:
       values: |
         adminUser: admin
