@@ -2,6 +2,7 @@
 existingSecret: cloudflare-tunnel
 
 tunnelID: '90241348-c1cd-46de-9698-0a8466c7425f'
+tunnelName: "rackspace"
 
 replicaCount: 1
 
