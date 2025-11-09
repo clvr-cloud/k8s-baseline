@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://cloudflare.github.io/helm-charts
     chart: cloudflared
-    targetRevision: 0.3.2  # or latest
+    targetRevision: latest  # or latest
     helm:
       valueFiles:
         - values.yaml
