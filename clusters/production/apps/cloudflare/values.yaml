@@ -1,0 +1,16 @@
+# apps/cloudflare-tunnel/values.yaml
+existingSecret: cloudflare-tunnel-token
+replicaCount: 1
+
+# Optional tuning
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+# Keep the tunnel next to your ingress
+podLabels:
+  app.kubernetes.io/name: cloudflare-tunnel
