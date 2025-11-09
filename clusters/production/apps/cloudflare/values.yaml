@@ -13,4 +13,4 @@ resources:
 
 # Keep the tunnel next to your ingress
 podLabels:
-  app.kubernetes.io/name: cloudflare-tunnel
+  app.kubernetes.io/name: cloudflare-tunnel-token
