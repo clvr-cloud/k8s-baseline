@@ -1,30 +1,50 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: portainer
+  name: portainer-agent
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://portainer.github.io/k8s/
     chart: portainer
-    targetRevision: 2.33.3  # check latest: https://portainer.github.io/k8s/
+    targetRevision: 2.33.3   # check latest at https://portainer.github.io/k8s/
     helm:
+      releaseName: portainer-agent
       values: |
+        enterpriseEdition:
+          enabled: false
+        persistence:
+          enabled: false
+
+        agent:
+          enabled: true
+
+        agentSecret:
+          enabled: true
+          stringData:
+            AGENT_SECRET: "super-secret-token"
+
         service:
           type: ClusterIP
+
         ingress:
           enabled: true
           ingressClassName: nginx
+          annotations:
+            kubernetes.io/ingress.class: nginx
+            nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/proxy-body-size: "0"
           hosts:
-            - host: portainer.rackspace.cristian.co.nz
+            - host: portainer-agent.rackspace.cristian.co.nz   # <-- change to your domain
               paths:
                 - path: /
                   pathType: Prefix
-        persistence:
-          enabled: true
-          storageClass: ssd
-          size: 5Gi
+          tls:
+            - secretName: portainer-agent-tls      # <-- create or use cert-manager
+              hosts:
+                - portainer-agent.rackspace.cristian.co.nz
   destination:
     server: https://kubernetes.default.svc
     namespace: portainer
