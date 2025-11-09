@@ -16,11 +16,7 @@ spec:
         image:
           repository: openspeedtest/latest
           pullPolicy: IfNotPresent
-
-        service:
-          type: LoadBalancer
-          port: 80
-
+          
         ingress:
           enabled: true
           className: nginx
