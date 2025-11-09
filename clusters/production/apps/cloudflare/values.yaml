@@ -1,5 +1,5 @@
 # apps/cloudflare-tunnel/values.yaml
-existingSecret: cloudflare-tunnel-token
+existingSecret: cloudflare-tunnel
 replicaCount: 1
 
 # Optional tuning
@@ -13,4 +13,4 @@ resources:
 
 # Keep the tunnel next to your ingress
 podLabels:
-  app.kubernetes.io/name: cloudflare-tunnel-token
+  app.kubernetes.io/name: cloudflare-tunnel
