@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflare-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.containeroo.ch
+    chart: cloudflare-operator
+    targetRevision: 1.7.0
+    helm:
+      releaseName: cloudflare-operator
+      values: |
+        replicaCount: 1
+        controller:
+          logLevel: info
+        rbac:
+          create: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflare
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  hooks:
+    - name: install-crds
+      type: PreSync
+      manifest: |
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: install-cloudflare-crds
+          namespace: argocd
+        spec:
+          template:
+            spec:
+              serviceAccountName: argocd-application-controller
+              restartPolicy: OnFailure
+              containers:
+                - name: crd-installer
+                  image: bitnami/kubectl:latest
+                  command:
+                    - /bin/sh
+                    - -c
+                    - |
+                      kubectl apply -f https://github.com/containeroo/cloudflare-operator/releases/latest/download/crds.yaml
