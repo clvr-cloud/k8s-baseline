@@ -7,8 +7,8 @@ spec:
   project: default
   source:
     repoURL: https://cloudflare.github.io/helm-charts
-    chart: cloudflared
-    targetRevision: latest  # or latest
+    chart: cloudflare-tunnel
+    targetRevision: 0.3.2  # or latest
     helm:
       valueFiles:
         - values.yaml
