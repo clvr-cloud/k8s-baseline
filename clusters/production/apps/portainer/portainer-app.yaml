@@ -23,7 +23,7 @@ spec:
                   pathType: Prefix
         persistence:
           enabled: true
-          storageClass: standard
+          storageClass: ssd
           size: 5Gi
   destination:
     server: https://kubernetes.default.svc
