@@ -24,3 +24,8 @@ metadata:
   name: external-dns
   labels:
     app.kubernetes.io/name: external-dns
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: portainer

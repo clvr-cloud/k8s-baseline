@@ -13,6 +13,9 @@ spec:
       values: |
         replicaCount: 1
 
+        service:
+          type: ClusterIP
+
         image:
           repository: openspeedtest/latest
           pullPolicy: IfNotPresent
