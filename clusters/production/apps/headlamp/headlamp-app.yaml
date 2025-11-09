@@ -43,7 +43,7 @@ spec:
           enabled: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring   # or whichever namespace you decide
+    namespace: kube-system   # or whichever namespace you decide
   syncPolicy:
     automated:
       prune: true
