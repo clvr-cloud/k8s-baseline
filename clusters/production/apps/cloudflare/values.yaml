@@ -2,13 +2,13 @@
 
 # Cloudflare parameters.
 cloudflare:
-  secretName: cloudflare-tunnel
+  # secretName: cloudflare-tunnel
   tunnelId: '90241348-c1cd-46de-9698-0a8466c7425f'
   tunnelName: "rackspace"
   # Your Cloudflare account number.
-  account: ""
+  # account: ""
   # The secret for the tunnel.
-  secret: ""
+  # secret: ""
   # If defined, no secret is created for the credentials, and instead, the secret referenced is used
   # If true, turn on WARP routing for TCP
   enableWarp: false
