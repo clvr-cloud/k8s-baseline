@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://code.benco.io/kubeview/deploy/helm
     chart: kubeview
-    targetRevision: "2.1.1"
+    targetRevision: "2.0.5"
     helm:
       releaseName: kubeview
       values: |
