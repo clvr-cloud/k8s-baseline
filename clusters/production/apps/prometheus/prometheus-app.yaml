@@ -10,7 +10,7 @@ spec:
     chart: kube-prometheus-stack
     targetRevision: 79.4.1
     helm:
-      skipCrds: false      # <--- important
+      skipCrds: true      # <--- important
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
