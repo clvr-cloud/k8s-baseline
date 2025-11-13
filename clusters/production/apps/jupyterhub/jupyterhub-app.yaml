@@ -79,7 +79,7 @@ spec:
           storage:
             capacity: 10Gi
           networkPolicy:
-            enabled: true
+            enabled: false
           extraLabels:
             hub.jupyter.org/network-access-hub: "true"
 
