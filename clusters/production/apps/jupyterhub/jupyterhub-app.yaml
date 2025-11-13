@@ -13,7 +13,7 @@ spec:
     helm:
       releaseName: jupyterhub
       valueFiles:
-        - values.yaml
+        - custom-values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: jupyterhub
