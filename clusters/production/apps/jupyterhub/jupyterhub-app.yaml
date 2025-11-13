@@ -12,10 +12,8 @@ spec:
     targetRevision: 4.3.1  # adjust to the desired version
     helm:
       releaseName: jupyterhub
-      values: |
-        proxy:
-          service:
-            type: ClusterIP
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: jupyterhub
