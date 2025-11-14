@@ -1,0 +1,554 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: burrito
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    chart: burrito
+    repoURL: oci://ghcr.io/padok-team/charts
+    targetRevision: 0.9.0-rc.2-5dd00f8583d5908ee851383bd3a463ef8a344351   # or specify a version like "0.1.4"
+    helm:
+      releaseName: burrito
+      values: |
+        # Burrito configuration
+        ## Ref: https://docs.burrito.tf/operator-manual/advanced-configuration/
+        config:
+          # -- Create ConfigMap with Burrito configuration
+          create: true
+          # -- Annotations to be added to the ConfigMap
+          annotations: {}
+
+          burrito:
+            controller:
+              # -- By default, the controller will only watch the tenants namespaces
+              namespaces: []
+              timers:
+                # -- Drift detection interval
+                driftDetection: 10m
+                # -- Repository polling interval
+                repositorySync: 5m
+                # -- Duration to wait before retrying on error
+                onError: 10s
+                # -- Duration to wait before retrying on locked layer
+                waitAction: 10s
+                # -- Duration to wait before retrying on failure (increases exponentially with the amount of failed retries)
+                failureGracePeriod: 30
+              # -- Default sync windows for layer reconciliation
+              defaultSyncWindows: []
+              # -- Maximum number of concurrent reconciles for the controller, increse this value if you have a lot of resources to reconcile
+              maxConcurrentReconciles: 1
+              # -- Maximum number of concurrent runners pods. 0 means no limit
+              maxConcurrentRunnerPods: 0
+              # -- Maximum number of retries for Terraform operations (plan, apply...)
+              terraformMaxRetries: 3
+              # TODO: enable repository controller by default
+              # -- Resource types to watch for reconciliation. Note: by default repository controller is disabled as it is not yet fully usable.
+              types: ["layer", "run", "pullrequest"]
+              leaderElection:
+                # -- Enable/Disable leader election
+                enabled: true
+                # -- Leader election lock name
+                id: 6d185457.terraform.padok.cloud
+              # -- Adress to bind the controller metrics
+              metricsBindAddress: ":8080"
+              # -- Adress to bind the controller health probe
+              healthProbeBindAddress: ":8081"
+              # -- Port used to handle the Kubernetes webhook
+              kubernetesWebhookPort: 9443
+            # -- Provider cache custom configuration
+            hermitcrab: {}
+            datastore:
+              # -- Service accounts that are allowed to access the datastore API in namespace/name format (not the service account used by the datastore pods, check datastore.serviceAccount.metadata for that)
+              serviceAccounts: []
+              storage:
+                # -- Use in-memory storage for testing - not intended for production use, data will be lost on datastore restart
+                mock: false
+                gcs:
+                  # -- GCS bucket name
+                  bucket: ""
+                azure:
+                  # -- Azure storage account name
+                  storageAccount: ""
+                  # -- Azure storage container name
+                  container: ""
+                s3:
+                  # -- S3 bucket name
+                  bucket: ""
+                  # -- S3 option for bucket name in path instead of as subdomain
+                  usePathStyle: false
+              # -- Datastore exposed port
+              addr: ":8080"
+              # -- Datastore hostname, used by controller, server and runner to reach the datastore
+              hostname: "burrito-datastore.burrito-system.svc.cluster.local"
+
+            server:
+              # -- Server exposed port
+              addr: ":8080"
+              basicAuth:
+                # -- Enable/Disable Basic Authentication for the Burrito server. If both Basic Auth and OIDC are disabled, the server will be publicly accessible.
+                enabled: false
+              oidc:
+                # -- Enable/Disable OIDC authentication for the Burrito server
+                enabled: false
+                # -- OIDC issuer URL
+                issuerUrl: ""
+                # -- OIDC client ID -- client secret should be set in a Kubernetes secret and referenced in server.deployment.envFrom with the key "BURRITO_SERVER_OIDC_CLIENTSECRET"
+                clientId: ""
+                # -- OIDC Redirect URL, should be the Burrito server URL with /auth/callback appended (ex: https://burrito.example.com/auth/callback)
+                redirectUrl: ""
+                # -- OIDC scopes to request
+                scopes:
+                  - "openid"
+                  - "profile"
+                  - "email"
+              session:
+                # -- Session max age in seconds, after which the session will expire
+                maxAge: 86400
+                # -- Cookie secure, set this to true if using HTTPS
+                secure: false
+
+            runner:
+              # -- Configmap name to store the SSH known hosts in the runner
+              sshKnownHostsConfigMapName: burrito-ssh-known-hosts
+              image:
+                # -- Default image to use for runners, can be overriden with spec.OverrideRunnerSpec in repositories and layer definitions
+                repository: ghcr.io/padok-team/burrito
+                tag: "" # By default use Chart's appVersion
+                pullPolicy: Always
+
+              # -- Command to run in the Burrito runner container
+              command: ["burrito"]
+              # -- Arguments to pass to the Burrito runner container
+              args: ["runner", "start"]
+
+        hermitcrab:
+          # -- Enable/Disable Hermitcrab (terraform provider cache in cluster)
+          enabled: false
+          metadata:
+            # -- Labels to be added to the Hermitcrab resources
+            labels:
+              app.kubernetes.io/component: hermitcrab
+              app.kubernetes.io/name: burrito-hermitcrab
+          storage:
+            emptyDir:
+              # -- Use emptyDir for Hermitcrab storage
+              enabled: true
+              # -- EmptyDir medium
+              medium: ""
+              # -- EmptyDir size limit
+              sizeLimit: "2Gi"
+            ephemeral:
+              # -- Use ephemeral storage for Hermitcrab storage
+              enabled: false
+              # -- Ephemeral storage size
+              size: "2Gi"
+              # -- Ephemeral storage class name
+              storageClassName: ""
+          tls:
+            # -- Reference a secret that contains a CA cer (ca.crt, tls.crt, tls.key) for Hermitcrab (if not using CertManager) - note: TLS is required for Hermitcrab, as Terraform Provider Mirror protocol requires it
+            secretName: burrito-hermitcrab-tls
+            certManager:
+              # -- Use CertManager for Hermitcrab TLS (recommended - requires cert-manager to be installed on the cluster)
+              use: true
+              certificate:
+                spec:
+                  # -- Secret name to store the Hermitcrab TLS certificate
+                  secretName: burrito-hermitcrab-tls
+                  # -- Common name for the Hermitcrab TLS certificate
+                  commonName: burrito-hermitcrab.burrito-system.svc.cluster.local
+                  # -- DNS names for the Hermitcrab TLS certificate
+                  dnsNames:
+                    - burrito-hermitcrab.burrito-system.svc.cluster.local
+                    - burrito-hermitcrab.burrito-system
+                    - burrito-hermitcrab
+                  issuerRef:
+                    # -- The default issuer name is "burrito-ca-issuer", packaged with the chart
+                    name: burrito-ca-issuer
+                    kind: Issuer
+          # -- Hermitcrab service configuration
+          service:
+            # -- Hermitcrab service annotations
+            annotations: {}
+            # -- Hermitcrab service traffic distribution policy
+            trafficDistribution: ""
+          deployment:
+            # -- Hermitcrab replicas
+            replicas: 1
+            # -- Hermitcrab tolerations
+            tolerations: []
+            # -- Hermitcrab node selector
+            nodeSelector: {}
+            # -- Hermitcrab affinity
+            affinity: {}
+            # -- Hermitcrab topology spread constraints
+            topologySpreadConstraints: []
+            # -- Hermitcrab image configuration
+            image:
+              pullPolicy: Always
+              repository: sealio/hermitcrab
+              tag: main
+            # -- Hermitcrab environment variables
+            env:
+              - name: SERVER_TLS_CERT_FILE
+                # -- Path to the Hermitcrab TLS certificate
+                value: /etc/hermitcrab/tls/tls.crt
+              - name: SERVER_TLS_PRIVATE_KEY_FILE
+                # -- Path to the Hermitcrab TLS private key
+                value: /etc/hermitcrab/tls/tls.key
+            # -- Hermitcrab resources configuration
+            resources:
+              limits:
+                cpu: "1"
+                memory: "2Gi"
+              requests:
+                cpu: "300m"
+                memory: "256Mi"
+            # -- Hermitcrab ports configuration
+            ports:
+              - name: http
+                containerPort: 80
+              - name: https
+                containerPort: 443
+            # -- Hermitcrab startup probe configuration
+            startupProbe:
+              failureThreshold: 10
+              periodSeconds: 5
+              httpGet:
+                port: 80
+                path: /readyz
+            # -- Hermitcrab readiness probe configuration
+            readinessProbe:
+              failureThreshold: 3
+              timeoutSeconds: 5
+              periodSeconds: 5
+              httpGet:
+                port: 80
+                path: /readyz
+            # -- Hermitcrab liveness probe configuration
+            livenessProbe:
+              failureThreshold: 10
+              timeoutSeconds: 5
+              periodSeconds: 10
+              httpGet:
+                httpHeaders:
+                  - name: "User-Agent"
+                    value: ""
+                port: 80
+                path: /livez
+            # -- Additional volumes
+            extraVolumes: {}
+            # -- Additional volume mounts
+            extraVolumeMounts: {}
+
+        global:
+          # -- Global metadata configuration
+          metadata:
+            labels:
+              app.kubernetes.io/part-of: burrito
+            annotations: {}
+          # Custom Resource Definitions
+          # Having CRDs under the Helm templates folder allows us to manage upgrades more easily
+          crds:
+            # -- Enable/Disable CRD installation through the Helm chart
+            install: true
+          deployment:
+            mode: Release
+            autoscaling:
+              # -- Enable/Disable autoscaling for Burrito pods
+              enabled: false
+            # --  Number of replicas for Burrito pods
+            replicas: 1
+            # -- Global image configuration
+            image:
+              repository: ghcr.io/padok-team/burrito
+              tag: "" # By default use Chart's appVersion
+              pullPolicy: Always
+            # -- Global annotations for pods generated by Burrito deployments
+            podAnnotations: {}
+            # -- Global pod security context configuration
+            podSecurityContext:
+              runAsNonRoot: true
+            # -- Global security context configuration
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - "ALL"
+            # -- Global resources configuration
+            resources: {}
+            # -- Global ports configuration
+            ports: []
+            # -- Global environment variables
+            envFrom: []
+            # -- Additional volumes
+            extraVolumes: {}
+            # -- Additional volume mounts
+            extraVolumeMounts: {}
+          # -- Global service configuration
+          service:
+            # -- Enable/Disable service creation for Burrito components
+            enabled: true
+          serviceAccount:
+            # -- Global metadata configuration for service accounts used by Burrito components
+            metadata:
+              annotations: {}
+              labels: {}
+          sshKnownHosts: |-
+            bitbucket.org ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAubiN81eDcafrgMeLzaFPsw2kNvEcqTKl/VqLat/MaB33pZy0y3rJZtnqwR2qOOvbwKZYKiEO1O6VqNEBxKvJJelCq0dTXWT5pbO2gDXC6h6QDXCaHo6pOHGPUy+YBaGQRGuSusMEASYiWunYN0vCAI8QaXnWMXNMdFP3jHAJH0eDsoiGnLPBlBp4TNm6rYI74nMzgz3B9IikW4WVK+dc8KZJZWYjAuORU3jc1c/NPskD2ASinf8v3xnfXeukU0sJ5N6m5E8VLjObPEO+mN2t/FZTMZLiFqPWc/ALSqnMnnhwrNi2rbfg/rd/IpL8Le3pSBne8+seeFVBoGqzHM9yXw==
+            github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+            gitlab.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFSMqzJeV9rUzU4kWitGjeR4PWSa29SPqJ1fVkhtj3Hw9xjLVXVYrU9QlYWrOLXBpQ6KWjbjTDTdDkoohFzgbEY=
+            gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+            gitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsj2bNKTBSpIYDEGk9KxsGh3mySTRgMtXL583qmBpzeQ+jqCMRgBqB98u3z++J1sKlXHWfM9dyhSevkMwSbhoR8XIq/U0tCNyokEi/ueaBMCvbcTHhO7FcwzY92WK4Yt0aGROY5qX2UKSeOvuP4D6TPqKF1onrSzH9bx9XUf2lEdWT/ia1NEKjunUqu1xOB/StKDHMoX4/OKyIzuS0q/T1zOATthvasJFoPrAjkohTyaDUz2LN5JoH839hViyEG82yB+MjcFV5MU3N1l1QL3cVUCh93xSaua1N85qivl+siMkPGbO5xR/En4iEY6K2XPASUEMaieWVNTRCtJ4S8H+9
+            ssh.dev.azure.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7Hr1oTWqNqOlzGJOfGJ4NakVyIzf1rXYd4d7wo6jBlkLvCA4odBlL0mDUyZ0/QUfTTqeu+tm22gOsv+VrVTMk6vwRU75gY/y9ut5Mb3bR5BV58dKXyq9A9UeB5Cakehn5Zgm6x1mKoVyf+FFn26iYqXJRgzIZZcZ5V6hrE0Qg39kZm4az48o0AUbf6Sp4SLdvnuMa2sVNwHBboS7EJkm57XQPVU3/QpyNLHbWDdzwtrlS+ez30S3AdYhLKEOxAG8weOnyrtLJAUen9mTkol8oII1edf7mWWbWVf0nBmly21+nZcmCTISQBtdcyPaEno7fFQMDD26/s0lfKob4Kw8H
+            vs-ssh.visualstudio.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7Hr1oTWqNqOlzGJOfGJ4NakVyIzf1rXYd4d7wo6jBlkLvCA4odBlL0mDUyZ0/QUfTTqeu+tm22gOsv+VrVTMk6vwRU75gY/y9ut5Mb3bR5BV58dKXyq9A9UeB5Cakehn5Zgm6x1mKoVyf+FFn26iYqXJRgzIZZcZ5V6hrE0Qg39kZm4az48o0AUbf6Sp4SLdvnuMa2sVNwHBboS7EJkm57XQPVU3/QpyNLHbWDdzwtrlS+ez30S3AdYhLKEOxAG8weOnyrtLJAUen9mTkol8oII1edf7mWWbWVf0nBmly21+nZcmCTISQBtdcyPaEno7fFQMDD26/s0lfKob4Kw8H
+            github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+            github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+
+        controllers:
+          # -- Metadata configuration for the Burrito controller
+          metadata:
+            labels:
+              app.kubernetes.io/component: controllers
+              app.kubernetes.io/name: burrito-controllers
+          # -- Deployment configuration for the Burrito controller
+          deployment:
+            # -- Annotations to be added to the pods generated by the Burrito controller deployment
+            podAnnotations:
+              kubectl.kubernetes.io/default-container: burrito
+            # -- Command to run in the Burrito controller container
+            command: ["burrito"]
+            # -- Arguments to pass to the Burrito controller container
+            args: ["controllers", "start"]
+            # -- Controller liveness probe configuration
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 8081
+              initialDelaySeconds: 5
+              periodSeconds: 20
+            # -- Controller readiness probe configuration
+            readinessProbe:
+              httpGet:
+                path: /readyz
+                port: 8081
+              initialDelaySeconds: 5
+              periodSeconds: 20
+            # -- Environment variables to pass to the Burrito controller container
+            envFrom: []
+            # -- Environment variables to pass to the Burrito controller container
+            env:
+              - name: SSH_KNOWN_HOSTS
+                value: /home/burrito/.ssh/known_hosts
+            # -- Additional volumes
+            extraVolumes: {}
+            # -- Additional volume mounts
+            extraVolumeMounts: {}
+          service:
+            # -- Enable/Disable service creation for the Burrito controller
+            enabled: false
+
+        server:
+          # -- Metadata configuration for the Burrito server
+          metadata:
+            labels:
+              app.kubernetes.io/component: server
+              app.kubernetes.io/name: burrito-server
+          # -- Deployment configuration for the Burrito server
+          deployment:
+            # -- Annotations to be added to the pods generated by the Burrito server deployment
+            podAnnotations:
+              kubectl.kubernetes.io/default-container: burrito
+            # -- Command to run in the Burrito server container
+            command: ["burrito"]
+            # -- Arguments to pass to the Burrito server container
+            args: ["server", "start"]
+            # -- Server exposed port
+            ports:
+              - name: http
+                containerPort: 8080
+            # -- Server liveness probe configuration
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 20
+            # -- Server readiness probe configuration
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 20
+            # -- Environment variables to pass to the Burrito server container
+            env: []
+            # -- Environment variables to pass to the Burrito server container
+            envFrom: []
+            # - secretRef:
+            #     name: burrito-oidc-client-secret ## Name of the secret containing the OIDC client secret at key "BURRITO_SERVER_OIDC_CLIENTSECRET"
+            # -- Additional volumes
+            extraVolumes: {}
+            # -- Additional volume mounts
+            extraVolumeMounts: {}
+            # -- Server tolerations
+            tolerations: []
+            # -- Server node selector
+            nodeSelector: {}
+            # -- Server affinity
+            affinity: {}
+            # -- Server topology spread constraints
+            topologySpreadConstraints: []
+          # -- Service configuration for the Burrito server
+          service:
+            ports:
+              - name: http
+                port: 80
+                targetPort: http
+            # -- Server service traffic distribution policy
+            trafficDistribution: ""
+          # -- Ingress configuration for the Burrito server
+          ingress:
+            # -- Enable/Disable ingress creation for the Burrito server
+            enabled: false
+            # -- Annotations to be added to the Burrito server ingress
+            annotations: {}
+            # -- Ingress class name to use for the Burrito server ingress
+            ingressClassName: nginx
+            # -- Hostname for the Burrito server ingress
+            host: burrito.example.com
+            # -- TLS configuration for the Burrito server ingress
+            tls: []
+
+        datastore:
+          # -- Metadata configuration for the Burrito datastore
+          metadata:
+            labels:
+              app.kubernetes.io/component: datastore
+              app.kubernetes.io/name: burrito-datastore
+          # -- Service account configuration for the Burrito datastore deployment. Use this to grant permission to the datastore to interact with external storage
+          serviceAccount:
+            metadata:
+              annotations: {}
+              labels: {}
+          deployment:
+            # -- Annotations to be added to the pods generated by the Burrito datastore deployment
+            podAnnotations:
+              kubectl.kubernetes.io/default-container: burrito
+            # -- Command to run in the Burrito datastore container
+            command: ["burrito"]
+            # -- Arguments to pass to the Burrito datastore container
+            args: ["datastore", "start"]
+            # -- Datastore exposed port
+            ports:
+              - name: http
+                containerPort: 8080
+            # -- Datastore liveness probe configuration
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 20
+            # -- Datastore readiness probe configuration
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: 8080
+              initialDelaySeconds: 5
+              periodSeconds: 20
+            # -- Environment variables to pass to the Burrito datastore container
+            envFrom: []
+            # -- Additional volumes
+            extraVolumes: {}
+            # -- Additional volume mounts
+            extraVolumeMounts: {}
+            # -- Datastore tolerations
+            tolerations: []
+            # -- Datastore node selector
+            nodeSelector: {}
+            # -- Datastore affinity
+            affinity: {}
+            # -- Datastore topology spread constraints
+            topologySpreadConstraints: []
+          # -- Service configuration for the Burrito datastore
+          service:
+            ports:
+              - name: http
+                port: 80
+                targetPort: http
+              - name: https
+                port: 443
+                targetPort: http
+            # -- Datastore service traffic distribution policy
+            trafficDistribution: ""
+          # -- TLS configuration for the Burrito datastore
+          tls:
+            # -- Enable/Disable TLS for the Burrito datastore (recommended for production use)
+            enabled: false
+            # -- Reference a secret that contains a CA certificate (ca.crt, tls.crt, tls.key) for the Burrito datastore (if not using CertManager)
+            secretName: burrito-datastore-tls
+            certManager:
+              # -- Use CertManager for Burrito datastore TLS (recommended - requires cert-manager to be installed on the cluster)
+              use: true
+              # -- CertManager certificate configuration
+              certificate:
+                spec:
+                  secretName: burrito-datastore-tls
+                  commonName: burrito-datastore.burrito-system.svc.cluster.local
+                  dnsNames:
+                    - burrito-datastore.burrito-system.svc.cluster.local
+                    - burrito-datastore.burrito-system
+                    - burrito-datastore
+                  issuerRef:
+                    # -- The default issuer name is "burrito-ca-issuer", packaged with the chart
+                    name: burrito-ca-issuer
+                    kind: Issuer
+
+        # -- List of tenants to create to manage Terraform resources
+        tenants: []
+        # - namespace:
+        #     create: true
+        #     name: "burrito-project-1"
+        #     labels: {}
+        #     annotations: {}
+        #   serviceAccounts:
+        #     - name: runner-project-1
+        #       additionalRoleBindings:
+        #         - name: custom
+        #           role:
+        #             kind: ClusterRole
+        #             name: my-custom-role
+        #       annotations:
+        #         iam.cloud.provider/role: cloud-provider-role
+        #       labels: {}
+
+        # Network Policy configuration
+        networkPolicy:
+          # -- Enable/Disable Network Policy creation
+          enabled: false
+          # -- Metadata configuration for Network Policies
+          metadata:
+            labels: {}
+            annotations: {}
+          # -- Network policy to allow ingress traffic from all the tenant namespaces to the release namespace
+          ingressFromTenants:
+            # -- Enable/Disable tenant ingress network policy
+            enabled: true
+            # -- Additional ingress rules for tenant namespaces network policy
+            additionalIngressRules: []
+
+
+
+  destination:
+    namespace: burrito-system
+    server: https://kubernetes.default.svc
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
