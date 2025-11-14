@@ -9,7 +9,7 @@ spec:
   source:
     chart: burrito
     repoURL: oci://ghcr.io/padok-team/charts
-    targetRevision: 0.9.0-rc.2-5dd00f8583d5908ee851383bd3a463ef8a344351   # or specify a version like "0.1.4"
+    targetRevision: latest   # or specify a version like "0.1.4"
     helm:
       releaseName: burrito
       values: |
