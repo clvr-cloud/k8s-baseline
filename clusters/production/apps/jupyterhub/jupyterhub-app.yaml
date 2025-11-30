@@ -376,7 +376,8 @@ spec:
         singleuser:
           podNameTemplate:
           extraTolerations: []
-          nodeSelector: {}
+          nodeSelector:
+            type: memory
           extraNodeAffinity:
             required: []
             preferred: []
