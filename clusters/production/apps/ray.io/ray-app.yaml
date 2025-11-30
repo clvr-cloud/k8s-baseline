@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ray-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://ray-project.github.io/kuberay-helm/  # Ray Helm repo
+    chart: kuberay-operator
+    targetRevision: 1.5.1  # or check latest via helm search repo ray
+    helm:
+      values: |
+        # Namespace where Ray will deploy resources
+        namespace: ray
+
+        # Number of head and worker replicas
+        head:
+          replicaCount: 1
+          serviceType: ClusterIP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1
+              memory: 2Gi
+
+        worker:
+          replicaCount: 2
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2
+              memory: 4Gi
+
+        # Enable autoscaling if desired
+        autoscaler:
+          enabled: true
+          minWorkers: 1
+          maxWorkers: 10
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ray
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
