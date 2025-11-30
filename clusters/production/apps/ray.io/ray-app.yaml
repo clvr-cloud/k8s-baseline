@@ -10,6 +10,7 @@ spec:
     chart: kuberay-operator
     targetRevision: 1.5.1  # or check latest via helm search repo ray
     helm:
+      skipCrds: true  
       values: |
         # Namespace where Ray will deploy resources
         namespace: ray
