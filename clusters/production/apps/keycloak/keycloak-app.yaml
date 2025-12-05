@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://codecentric.github.io/helm-charts
+    chart: keycloak
+    targetRevision: 18.10.0   # or the desired version
+    helm:
+      releaseName: keycloak
+      # Optional: override values — either inline:
+      values: |
+        # Example overrides
+        replicaCount: 3
+        service:
+          type: ClusterIP
+        # Add any other chart values here
+      # Or reference values files if you store them alongside this manifest (requires values.yaml in same repo):
+      # valueFiles:
+      #   - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
