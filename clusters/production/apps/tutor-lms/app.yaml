@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wordpress-tutorlms
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: wordpress
+    targetRevision: 28.0.4  # example, ArgoCD will pin version
+    helm:
+      releaseName: wordpress
+      values: |
+        wordpressUsername: admin
+        wordpressPassword: admin-password
+        wordpressEmail: admin@example.com
+        wordpressBlogName: "Ututear"
+
+        service:
+          type: ClusterIP
+
+        persistence:
+          enabled: true
+          size: 10Gi
+
+        mariadb:
+          enabled: true
+          primary:
+            persistence:
+              size: 10Gi
+
+        wordpressPlugins:
+          - tutor
+          - tutor-lms-elementor-addons
+          - woocommerce
+
+        extraEnvVars:
+          - name: WORDPRESS_DEBUG
+            value: "false"
+
+        ingress:
+          enabled: false
+          ingressClassName: nginx
+          hostname: tutor.localhost
+          annotations:
+            nginx.ingress.kubernetes.io/rewrite-target: /
+          tls: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wordpress
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
