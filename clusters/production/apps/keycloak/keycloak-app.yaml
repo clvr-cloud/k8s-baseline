@@ -126,7 +126,9 @@ spec:
           #   value: DEBUG
 
         # Additional environment variables for Keycloak mapped from Secret or ConfigMap
-        extraEnvFrom: ""
+        extraEnvFrom:
+          - secretRef:
+              name: db-password
 
         #  Pod priority class name
         priorityClassName: ""
