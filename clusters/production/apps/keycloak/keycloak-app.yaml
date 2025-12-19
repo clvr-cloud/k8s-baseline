@@ -419,7 +419,7 @@ spec:
           # existingSecret: "my-existent-dbpass-secret"
           # existingSecretKey: "password"
           existingSecret: "db-password"
-          existingSecretKey: "postgres"
+          # existingSecretKey: "postgres"
           # E.g. dev-file, dev-mem, mariadb, mssql, mysql, oracle or postgres
           vendor:
           hostname:
