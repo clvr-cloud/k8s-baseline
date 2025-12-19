@@ -423,12 +423,11 @@ spec:
           # existingSecret: "db-password"
           # existingSecretKey: "postgres"
           # E.g. dev-file, dev-mem, mariadb, mssql, mysql, oracle or postgres
-          vendor:
-          hostname:
-          port:
-          database:
-          username:
-          password:
+          vendor: postgres
+          hostname: us-central-dfw-2.db.spot.rackspace.com
+          port: 15492
+          database: keycloak
+          username: postgres
 
         cache:
           # Use "custom" to disable automatic cache configuration
