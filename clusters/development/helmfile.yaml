@@ -1,0 +1,82 @@
+repositories:
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: cloudflare
+    url: https://cloudflare.github.io/helm-charts
+  - name: openspeedtest
+    url: https://openspeedtest.github.io/Helm-chart
+
+releases:
+  # --- Prometheus Operator ---
+  - name: kube-prometheus-stack
+    namespace: monitoring
+    chart: prometheus-community/kube-prometheus-stack
+    version: 65.0.0
+    values:
+      - grafana:
+          enabled: false  # we'll deploy standalone Grafana
+        prometheus:
+          prometheusSpec:
+            retention: 15d
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+
+  # --- Grafana ---
+  - name: grafana
+    namespace: monitoring
+    chart: grafana/grafana
+    version: 8.6.0
+    values:
+      - adminUser: admin
+        adminPassword: prom-ops
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Prometheus
+                type: prometheus
+                access: proxy
+                url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+              - name: Loki
+                type: loki
+                access: proxy
+                url: http://loki.logging.svc.cluster.local:3100
+        persistence:
+          enabled: true
+          size: 2Gi
+
+  # --- Loki ---
+  - name: loki
+    namespace: logging
+    chart: grafana/loki-stack
+    version: 2.10.2
+    values:
+      - loki:
+          persistence:
+            enabled: true
+            size: 10Gi
+        promtail:
+          enabled: true
+
+  # --- Speedtest ---
+  - name: speedtest
+    namespace: speedtest
+    chart: grafana/speedtest
+    version: 0.3.3
+    values:
+      - speedtest:
+          interval: 30m
+          server: auto
+
+  # --- Ingress Controller ---
+  - name: nginx-ingress
+    namespace: ingress
+    chart: ingress-nginx/ingress-nginx
+    version: 4.11.2
+    repository: https://kubernetes.github.io/ingress-nginx
+    values:
+      - controller:
+          service:
+            type: LoadBalancer

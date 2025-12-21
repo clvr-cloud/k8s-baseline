@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openspeedtest
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://openspeedtest.github.io/Helm-chart/
+    chart: openspeedtest
+    targetRevision: 0.1.2 # check latest with helm search
+    helm:
+      values: |
+        replicaCount: 1
+
+        service:
+          type: ClusterIP
+
+        image:
+          repository: openspeedtest/latest
+          pullPolicy: IfNotPresent
+          
+        ingress:
+          enabled: false
+          className: nginx
+          annotations:
+            kubernetes.io/ingress.class: nginx
+          hosts:
+            - host: openspeedtest.rackspace.cristian.co.nz
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls: []
+
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: headlamp
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/headlamp/
+    chart: headlamp
+    targetRevision: v0.37.0   # use the version you choose
+    helm:
+      releaseName: headlamp
+      values: |
+        replicaCount: 2
+
+        image:
+          repository: headlamp-k8s/headlamp
+          tag: v0.35.0
+          pullPolicy: IfNotPresent
+
+        service:
+          type: ClusterIP
+          port: 80
+
+        ingress:
+          enabled: false
+          ingressClassName: nginx
+          annotations:
+            kubernetes.io/ingress.class: nginx
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          hosts:
+            - host: headlamp.rackspace.cristian.co.nz
+              paths:
+                - path: /
+                  type: ImplementationSpecific
+          tls:
+            - secretName: headlamp-tls
+              hosts:
+                - headlamp.rackspace.cristian.co.nz
+
+        auth:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system   # or whichever namespace you decide
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
