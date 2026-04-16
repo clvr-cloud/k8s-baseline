@@ -110,7 +110,7 @@ spec:
               selector: {}
               accessModes:
                 - ReadWriteOnce
-              storage: 5Gi
+              storage: 10Gi
               subPath:
               storageClassName:
             url:
