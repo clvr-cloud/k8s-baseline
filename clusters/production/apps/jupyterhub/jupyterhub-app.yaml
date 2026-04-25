@@ -457,7 +457,7 @@ spec:
             static:
               pvcName:
               subPath: "{username}"
-            capacity: 10Gi
+            capacity: 20Gi
             homeMountPath: /home/jovyan
             dynamic:
               storageClass:
