@@ -472,7 +472,7 @@ spec:
             pullSecrets: []
           startTimeout: 300
           cpu:
-            limit: 2
+            limit: 1
             guarantee: 1
           memory:
             limit: 16G
