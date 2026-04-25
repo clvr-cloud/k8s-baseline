@@ -473,10 +473,10 @@ spec:
           startTimeout: 300
           cpu:
             limit: 2
-            guarantee: 2
+            guarantee: 1
           memory:
-            limit: 4G
-            guarantee: 4G
+            limit: 16G
+            guarantee: 16G
           extraResource:
             limits: {}
             guarantees: {}
